@@ -25,33 +25,44 @@
             transition: all 0.2s;
             min-width: 160px;
         }
+
+        .search-input {
+            transition: all 0.3s ease;
+        }
+        .search-input:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen p-4 md:p-8">
-    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-        <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+<body class="bg-gray-50 min-h-screen p-4 md:p-8 font-sans">
+    <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-white sticky top-0 z-10">
             <div>
-                <h1 class="text-2xl font-bold text-gray-800">📋 Registro de Equipos IG</h1>
-                <p class="text-gray-500">Gestiona tus contactos, países y estados (Datos auto-guardados)</p>
+                <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    📋 Registro de Equipos IG
+                </h1>
+                <p class="text-gray-500 text-sm">Gestiona tus contactos, países y estados (Auto-guardado activo)</p>
             </div>
-            <div class="flex gap-2">
-                <!-- Botón de Importar -->
+            <div class="flex flex-wrap gap-2 justify-center">
                 <input type="file" id="importFile" class="hidden" accept=".xlsx, .xls" onchange="importFromExcel(event)">
-                <button onclick="document.getElementById('importFile').click()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg flex items-center gap-2 transition font-semibold border border-blue-200">
-                    <span>📂 Importar Excel</span>
+                <button onclick="document.getElementById('importFile').click()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg flex items-center gap-2 transition font-semibold border border-blue-200">
+                    📂 Importar
                 </button>
                 <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm font-semibold">
-                    <span>📥 Descargar Excel</span>
+                    📥 Descargar Excel
                 </button>
             </div>
         </div>
 
         <!-- Formulario de Entrada -->
         <div class="p-6 bg-gray-50 border-b border-gray-200">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <input type="text" id="teamName" placeholder="Nombre del Equipo" class="p-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none bg-white">
-                <input type="text" id="clubCountry" placeholder="📍 País" class="p-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none bg-white">
-                <input type="text" id="igUser" placeholder="Usuario (@ejemplo)" class="p-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none bg-white">
+            <h2 class="text-sm font-bold text-gray-400 uppercase mb-4 tracking-wider">Añadir Nuevo Registro</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                <input type="text" id="teamName" placeholder="Equipo" class="p-2 border rounded-md outline-none bg-white">
+                <input type="text" id="clubCountry" placeholder="📍 País" class="p-2 border rounded-md outline-none bg-white">
+                <input type="text" id="igUser" placeholder="Instagram (@...)" class="p-2 border rounded-md outline-none bg-white">
+                <input type="date" id="contactDate" class="p-2 border rounded-md outline-none bg-white">
                 <select id="status" class="p-2 border rounded-md bg-white cursor-pointer">
                     <option value="Pendiente">🕒 Pendiente</option>
                     <option value="Enviado">📩 Enviado</option>
@@ -59,9 +70,20 @@
                     <option value="Rechazado">❌ Rechazado</option>
                     <option value="Finalizado">✅ Finalizado</option>
                 </select>
-                <button onclick="addRow()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                <button onclick="addRow()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-md">
                     + Agregar
                 </button>
+            </div>
+        </div>
+
+        <!-- Barra de Búsqueda / Filtros -->
+        <div class="px-6 py-4 bg-white border-b border-gray-100">
+            <div class="relative max-w-md">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    🔍
+                </span>
+                <input type="text" id="tableSearch" onkeyup="filterTable()" placeholder="Buscar por equipo, país, IG o estado..." 
+                    class="search-input block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-full leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 sm:text-sm">
             </div>
         </div>
 
@@ -69,23 +91,30 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse" id="mainTable">
                 <thead>
-                    <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-semibold">
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-[10px] font-bold tracking-widest">
                         <th class="px-6 py-4 border-b">Equipo</th>
                         <th class="px-6 py-4 border-b">País</th>
                         <th class="px-6 py-4 border-b">Instagram</th>
+                        <th class="px-6 py-4 border-b">Fecha</th>
                         <th class="px-6 py-4 border-b">Estado</th>
                         <th class="px-6 py-4 border-b text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <!-- Los datos se cargarán desde localStorage -->
+                    <!-- Datos dinámicos -->
                 </tbody>
             </table>
+        </div>
+        
+        <div id="noResults" class="hidden p-10 text-center text-gray-500 italic">
+            No se encontraron resultados para tu búsqueda.
         </div>
     </div>
 
     <script>
-        // Cargar datos al iniciar
+        // Establecer fecha de hoy por defecto en el input
+        document.getElementById('contactDate').valueAsDate = new Date();
+
         window.onload = function() {
             loadFromLocalStorage();
         };
@@ -98,7 +127,8 @@
                     name: tr.cells[0].innerText,
                     country: tr.cells[1].innerText.replace('📍 ', ''),
                     user: tr.cells[2].innerText.replace('@', ''),
-                    status: tr.cells[3].querySelector('select').value
+                    date: tr.cells[3].querySelector('input') ? tr.cells[3].querySelector('input').value : tr.cells[3].innerText,
+                    status: tr.cells[4].querySelector('select').value
                 });
             });
             localStorage.setItem('igTeamsData', JSON.stringify(data));
@@ -111,9 +141,31 @@
                 const tableBody = document.getElementById('tableBody');
                 tableBody.innerHTML = '';
                 data.forEach(item => {
-                    addRow(item.name, item.country, item.user, item.status, true);
+                    addRow(item.name, item.country, item.user, item.status, item.date, true);
                 });
             }
+        }
+
+        function filterTable() {
+            const input = document.getElementById('tableSearch');
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById('tableBody');
+            const trs = table.getElementsByTagName('tr');
+            let hasResults = false;
+
+            for (let i = 0; i < trs.length; i++) {
+                const textContent = trs[i].textContent.toLowerCase();
+                const statusValue = trs[i].cells[4].querySelector('select').value.toLowerCase();
+                
+                if (textContent.includes(filter) || statusValue.includes(filter)) {
+                    trs[i].style.display = "";
+                    hasResults = true;
+                } else {
+                    trs[i].style.display = "none";
+                }
+            }
+
+            document.getElementById('noResults').style.display = hasResults ? "none" : "block";
         }
 
         function updateStatusStyle(selectElement) {
@@ -126,23 +178,24 @@
             else if (val.includes("Rechazado")) selectElement.classList.add("status-rechazado");
             else if (val.includes("Finalizado")) selectElement.classList.add("status-finalizado");
             
-            saveToLocalStorage(); // Guardar cambio de estado
+            saveToLocalStorage();
         }
 
-        function addRow(name = "", country = "", user = "", initialStatus = "", isLoading = false) {
+        function addRow(name = "", country = "", user = "", initialStatus = "", initialDate = "", isLoading = false) {
             const teamName = name || document.getElementById('teamName').value;
             const clubCountry = country || document.getElementById('clubCountry').value;
             let igUser = (user || document.getElementById('igUser').value).replace('@', '');
             const status = initialStatus || document.getElementById('status').value;
+            const rowDate = initialDate || document.getElementById('contactDate').value;
 
             if (!teamName || !igUser) {
-                if(!name) alert("Por favor completa al menos Equipo e Instagram.");
+                if(!isLoading) alert("Por favor completa al menos Equipo e Instagram.");
                 return;
             }
 
             const tableBody = document.getElementById('tableBody');
             const row = document.createElement('tr');
-            row.className = "hover:bg-gray-50 transition text-sm";
+            row.className = "hover:bg-gray-50 transition text-sm border-b border-gray-100";
             
             let statusClass = "status-pendiente";
             if (status.includes("Enviado")) statusClass = "status-enviado";
@@ -151,10 +204,13 @@
             else if (status.includes("Finalizado")) statusClass = "status-finalizado";
 
             row.innerHTML = `
-                <td class="px-6 py-4 border-b font-medium text-gray-800">${teamName}</td>
-                <td class="px-6 py-4 border-b text-gray-600 font-medium">📍 ${clubCountry || 'N/A'}</td>
-                <td class="px-6 py-4 border-b text-blue-600 font-semibold italic"><a href="https://instagram.com/${igUser}" target="_blank">@${igUser}</a></td>
-                <td class="px-6 py-4 border-b">
+                <td class="px-6 py-4 font-medium text-gray-800">${teamName}</td>
+                <td class="px-6 py-4 text-gray-600">📍 ${clubCountry || 'N/A'}</td>
+                <td class="px-6 py-4 text-blue-600 font-semibold italic"><a href="https://instagram.com/${igUser}" target="_blank">@${igUser}</a></td>
+                <td class="px-6 py-4 text-gray-500">
+                    <input type="date" value="${rowDate}" onchange="saveToLocalStorage()" class="bg-transparent outline-none focus:border-b border-blue-200">
+                </td>
+                <td class="px-6 py-4">
                     <select onchange="updateStatusStyle(this)" class="status-select ${statusClass}">
                         <option value="Pendiente" ${status.includes('Pendiente') ? 'selected' : ''}>🕒 Pendiente</option>
                         <option value="Enviado" ${status.includes('Enviado') ? 'selected' : ''}>📩 Enviado</option>
@@ -163,42 +219,49 @@
                         <option value="Finalizado" ${status.includes('Finalizado') ? 'selected' : ''}>✅ Finalizado</option>
                     </select>
                 </td>
-                <td class="px-6 py-4 border-b text-center"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 font-bold">Eliminar</button></td>
+                <td class="px-6 py-4 text-center">
+                    <button onclick="deleteRow(this)" class="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50">
+                        🗑️
+                    </button>
+                </td>
             `;
 
             tableBody.appendChild(row);
             
             if(!isLoading) {
                 saveToLocalStorage();
-                if(!name) {
-                    document.getElementById('teamName').value = '';
-                    document.getElementById('clubCountry').value = '';
-                    document.getElementById('igUser').value = '';
-                }
+                document.getElementById('teamName').value = '';
+                document.getElementById('clubCountry').value = '';
+                document.getElementById('igUser').value = '';
+                document.getElementById('contactDate').valueAsDate = new Date();
             }
         }
 
         function deleteRow(btn) {
-            btn.closest('tr').remove();
-            saveToLocalStorage();
+            if(confirm("¿Estás seguro de que quieres eliminar este equipo?")) {
+                btn.closest('tr').remove();
+                saveToLocalStorage();
+                filterTable();
+            }
         }
 
         function exportToExcel() {
-            const data = [["Equipo", "País", "Instagram", "Estado"]];
+            const data = [["Equipo", "País", "Instagram", "Fecha", "Estado"]];
             const trs = document.querySelectorAll('#tableBody tr');
             
             trs.forEach(tr => {
                 const team = tr.cells[0].innerText;
                 const country = tr.cells[1].innerText.replace('📍 ', '');
                 const ig = tr.cells[2].innerText;
-                const status = tr.cells[3].querySelector('select').value;
-                data.push([team, country, ig, status]);
+                const date = tr.cells[3].querySelector('input').value;
+                const status = tr.cells[4].querySelector('select').value;
+                data.push([team, country, ig, date, status]);
             });
 
             const ws = XLSX.utils.aoa_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Equipos");
-            XLSX.writeFile(wb, "Registro_Equipos_Instagram.xlsx");
+            XLSX.utils.book_append_sheet(wb, ws, "Contactos");
+            XLSX.writeFile(wb, "Registro_Contactos_IG.xlsx");
         }
 
         function importFromExcel(event) {
@@ -209,22 +272,22 @@
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                 const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
 
                 for(let i = 1; i < json.length; i++) {
-                    const rowData = json[i];
-                    if(rowData.length >= 2) {
+                    const row = json[i];
+                    if(row[0] || row[2]) {
                         addRow(
-                            rowData[0] || "S/N", 
-                            rowData[1] || "", 
-                            rowData[2] || "", 
-                            rowData[3] || "Pendiente"
+                            row[0] || "Sin nombre", 
+                            row[1] || "", 
+                            row[2] || "", 
+                            row[4] || "Pendiente",
+                            row[3] || new Date().toISOString().split('T')[0]
                         );
                     }
                 }
-                alert("Importación completada con éxito");
+                alert("Importación finalizada.");
                 event.target.value = '';
             };
             reader.readAsArrayBuffer(file);
