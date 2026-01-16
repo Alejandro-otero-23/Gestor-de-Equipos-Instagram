@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Contactos Instagram</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería para exportar a Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .status-pendiente { background-color: #ebf8ff; color: #2b6cb0; }
+        .status-enviado { background-color: #fefcbf; color: #b7791f; }
+        .status-conversacion { background-color: #f0fff4; color: #2f855a; }
+        .status-rechazado { background-color: #fff5f5; color: #c53030; }
+        .status-finalizado { background-color: #faf5ff; color: #6b46c1; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-8">
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">📋 Registro de Equipos IG</h1>
+                <p class="text-gray-500">Organiza tus contactos y exporta a Excel</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                    <span>📥 Descargar Excel</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Formulario de Entrada -->
+        <div class="p-6 bg-gray-50 border-b border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="text" id="teamName" placeholder="Nombre del Equipo" class="p-2 border rounded-md">
+                <input type="text" id="igUser" placeholder="Usuario (@ejemplo)" class="p-2 border rounded-md">
+                <select id="status" class="p-2 border rounded-md">
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Enviado">Enviado</option>
+                    <option value="En Conversación">En Conversación</option>
+                    <option value="Rechazado">Rechazado</option>
+                    <option value="Finalizado">Finalizado</option>
+                </select>
+                <button onclick="addRow()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                    + Agregar Equipo
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse" id="mainTable">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-semibold">
+                        <th class="px-6 py-4 border-b">Equipo</th>
+                        <th class="px-6 py-4 border-b">Instagram</th>
+                        <th class="px-6 py-4 border-b">Estado</th>
+                        <th class="px-6 py-4 border-b">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Filas de ejemplo iniciales -->
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 border-b font-medium">Kraken Gaming</td>
+                        <td class="px-6 py-4 border-b text-blue-600"><a href="https://instagram.com/krakengaming" target="_blank">@krakengaming</a></td>
+                        <td class="px-6 py-4 border-b"><span class="px-2 py-1 rounded-full text-xs font-bold status-conversacion">En Conversación</span></td>
+                        <td class="px-6 py-4 border-b"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 font-bold">Eliminar</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function addRow() {
+            const teamName = document.getElementById('teamName').value;
+            let igUser = document.getElementById('igUser').value.replace('@', '');
+            const status = document.getElementById('status').value;
+
+            if (!teamName || !igUser) {
+                alert("Por favor completa los campos de Equipo y Usuario.");
+                return;
+            }
+
+            const tableBody = document.getElementById('tableBody');
+            const row = document.createElement('tr');
+            row.className = "hover:bg-gray-50 transition";
+            
+            const statusClass = "status-" + status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+
+            row.innerHTML = `
+                <td class="px-6 py-4 border-b font-medium">${teamName}</td>
+                <td class="px-6 py-4 border-b text-blue-600"><a href="https://instagram.com/${igUser}" target="_blank">@${igUser}</a></td>
+                <td class="px-6 py-4 border-b"><span class="px-2 py-1 rounded-full text-xs font-bold ${statusClass}">${status}</span></td>
+                <td class="px-6 py-4 border-b"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 font-bold">Eliminar</button></td>
+            `;
+
+            tableBody.appendChild(row);
+
+            // Limpiar inputs
+            document.getElementById('teamName').value = '';
+            document.getElementById('igUser').value = '';
+        }
+
+        function deleteRow(btn) {
+            btn.closest('tr').remove();
+        }
+
+        function exportToExcel() {
+            const table = document.getElementById('mainTable');
+            const rows = [];
+            
+            // Recopilar datos excluyendo la columna de acciones
+            const trs = table.querySelectorAll('tr');
+            trs.forEach((tr, index) => {
+                const rowData = [];
+                const tds = tr.querySelectorAll('th, td');
+                for (let i = 0; i < tds.length - 1; i++) {
+                    rowData.push(tds[i].innerText);
+                }
+                rows.push(rowData);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Equipos IG");
+            
+            // Generar archivo
+            XLSX.writeFile(wb, "Registro_Equipos_Instagram.xlsx");
+        }
+    </script>
+</body>
+</html>
