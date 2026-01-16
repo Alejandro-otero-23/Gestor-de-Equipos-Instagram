@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Contactos Instagram</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Librería para exportar a Excel -->
+    <!-- Librería para manejar Excel (Exportar e Importar) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .status-pendiente { background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
@@ -32,9 +32,14 @@
         <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">📋 Registro de Equipos IG</h1>
-                <p class="text-gray-500">Organiza tus contactos y exporta a Excel</p>
+                <p class="text-gray-500">Gestiona tus contactos, países y estados (Datos auto-guardados)</p>
             </div>
             <div class="flex gap-2">
+                <!-- Botón de Importar -->
+                <input type="file" id="importFile" class="hidden" accept=".xlsx, .xls" onchange="importFromExcel(event)">
+                <button onclick="document.getElementById('importFile').click()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg flex items-center gap-2 transition font-semibold border border-blue-200">
+                    <span>📂 Importar Excel</span>
+                </button>
                 <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm font-semibold">
                     <span>📥 Descargar Excel</span>
                 </button>
@@ -43,10 +48,11 @@
 
         <!-- Formulario de Entrada -->
         <div class="p-6 bg-gray-50 border-b border-gray-200">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input type="text" id="teamName" placeholder="Nombre del Equipo" class="p-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none">
-                <input type="text" id="igUser" placeholder="Usuario (@ejemplo)" class="p-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none">
-                <select id="status" class="p-2 border rounded-md bg-white">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <input type="text" id="teamName" placeholder="Nombre del Equipo" class="p-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none bg-white">
+                <input type="text" id="clubCountry" placeholder="📍 País" class="p-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none bg-white">
+                <input type="text" id="igUser" placeholder="Usuario (@ejemplo)" class="p-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none bg-white">
+                <select id="status" class="p-2 border rounded-md bg-white cursor-pointer">
                     <option value="Pendiente">🕒 Pendiente</option>
                     <option value="Enviado">📩 Enviado</option>
                     <option value="En Conversación">💬 En Conversación</option>
@@ -54,7 +60,7 @@
                     <option value="Finalizado">✅ Finalizado</option>
                 </select>
                 <button onclick="addRow()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">
-                    + Agregar Equipo
+                    + Agregar
                 </button>
             </div>
         </div>
@@ -65,73 +71,88 @@
                 <thead>
                     <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-semibold">
                         <th class="px-6 py-4 border-b">Equipo</th>
+                        <th class="px-6 py-4 border-b">País</th>
                         <th class="px-6 py-4 border-b">Instagram</th>
                         <th class="px-6 py-4 border-b">Estado</th>
-                        <th class="px-6 py-4 border-b">Acciones</th>
+                        <th class="px-6 py-4 border-b text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <!-- Fila de ejemplo con iconos -->
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 border-b font-medium">Ejemplo Team</td>
-                        <td class="px-6 py-4 border-b text-blue-600 font-semibold italic"><a href="https://instagram.com/ejemplo" target="_blank">@ejemplo</a></td>
-                        <td class="px-6 py-4 border-b">
-                            <select onchange="updateStatusStyle(this)" class="status-select status-enviado">
-                                <option value="Pendiente">🕒 Pendiente</option>
-                                <option value="Enviado" selected>📩 Enviado</option>
-                                <option value="En Conversación">💬 En Conversación</option>
-                                <option value="Rechazado">❌ Rechazado</option>
-                                <option value="Finalizado">✅ Finalizado</option>
-                            </select>
-                        </td>
-                        <td class="px-6 py-4 border-b"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 font-bold text-sm">Eliminar</button></td>
-                    </tr>
+                    <!-- Los datos se cargarán desde localStorage -->
                 </tbody>
             </table>
         </div>
     </div>
 
     <script>
-        function getStatusClass(status) {
-            // Limpia el texto de emojis y espacios para la clase CSS
-            const cleanStatus = status.split(' ').pop().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            return "status-" + cleanStatus;
+        // Cargar datos al iniciar
+        window.onload = function() {
+            loadFromLocalStorage();
+        };
+
+        function saveToLocalStorage() {
+            const data = [];
+            const trs = document.querySelectorAll('#tableBody tr');
+            trs.forEach(tr => {
+                data.push({
+                    name: tr.cells[0].innerText,
+                    country: tr.cells[1].innerText.replace('📍 ', ''),
+                    user: tr.cells[2].innerText.replace('@', ''),
+                    status: tr.cells[3].querySelector('select').value
+                });
+            });
+            localStorage.setItem('igTeamsData', JSON.stringify(data));
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('igTeamsData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                const tableBody = document.getElementById('tableBody');
+                tableBody.innerHTML = '';
+                data.forEach(item => {
+                    addRow(item.name, item.country, item.user, item.status, true);
+                });
+            }
         }
 
         function updateStatusStyle(selectElement) {
             selectElement.className = "status-select";
-            const statusValue = selectElement.value;
+            const val = selectElement.value;
             
-            if (statusValue.includes("Pendiente")) selectElement.classList.add("status-pendiente");
-            if (statusValue.includes("Enviado")) selectElement.classList.add("status-enviado");
-            if (statusValue.includes("En Conversación")) selectElement.classList.add("status-conversacion");
-            if (statusValue.includes("Rechazado")) selectElement.classList.add("status-rechazado");
-            if (statusValue.includes("Finalizado")) selectElement.classList.add("status-finalizado");
+            if (val.includes("Pendiente")) selectElement.classList.add("status-pendiente");
+            else if (val.includes("Enviado")) selectElement.classList.add("status-enviado");
+            else if (val.includes("Conversación")) selectElement.classList.add("status-conversacion");
+            else if (val.includes("Rechazado")) selectElement.classList.add("status-rechazado");
+            else if (val.includes("Finalizado")) selectElement.classList.add("status-finalizado");
+            
+            saveToLocalStorage(); // Guardar cambio de estado
         }
 
-        function addRow() {
-            const teamName = document.getElementById('teamName').value;
-            let igUser = document.getElementById('igUser').value.replace('@', '');
-            const status = document.getElementById('status').value;
+        function addRow(name = "", country = "", user = "", initialStatus = "", isLoading = false) {
+            const teamName = name || document.getElementById('teamName').value;
+            const clubCountry = country || document.getElementById('clubCountry').value;
+            let igUser = (user || document.getElementById('igUser').value).replace('@', '');
+            const status = initialStatus || document.getElementById('status').value;
 
             if (!teamName || !igUser) {
-                alert("Por favor completa los campos de Equipo y Usuario.");
+                if(!name) alert("Por favor completa al menos Equipo e Instagram.");
                 return;
             }
 
             const tableBody = document.getElementById('tableBody');
             const row = document.createElement('tr');
-            row.className = "hover:bg-gray-50 transition";
+            row.className = "hover:bg-gray-50 transition text-sm";
             
-            // Determinar clase inicial
             let statusClass = "status-pendiente";
             if (status.includes("Enviado")) statusClass = "status-enviado";
-            if (status.includes("En Conversación")) statusClass = "status-conversacion";
-            if (status.includes("Rechazado")) statusClass = "status-rechazado";
-            if (status.includes("Finalizado")) statusClass = "status-finalizado";
+            else if (status.includes("Conversación")) statusClass = "status-conversacion";
+            else if (status.includes("Rechazado")) statusClass = "status-rechazado";
+            else if (status.includes("Finalizado")) statusClass = "status-finalizado";
 
             row.innerHTML = `
-                <td class="px-6 py-4 border-b font-medium">${teamName}</td>
+                <td class="px-6 py-4 border-b font-medium text-gray-800">${teamName}</td>
+                <td class="px-6 py-4 border-b text-gray-600 font-medium">📍 ${clubCountry || 'N/A'}</td>
                 <td class="px-6 py-4 border-b text-blue-600 font-semibold italic"><a href="https://instagram.com/${igUser}" target="_blank">@${igUser}</a></td>
                 <td class="px-6 py-4 border-b">
                     <select onchange="updateStatusStyle(this)" class="status-select ${statusClass}">
@@ -142,33 +163,71 @@
                         <option value="Finalizado" ${status.includes('Finalizado') ? 'selected' : ''}>✅ Finalizado</option>
                     </select>
                 </td>
-                <td class="px-6 py-4 border-b"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 font-bold text-sm">Eliminar</button></td>
+                <td class="px-6 py-4 border-b text-center"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 font-bold">Eliminar</button></td>
             `;
 
             tableBody.appendChild(row);
-            document.getElementById('teamName').value = '';
-            document.getElementById('igUser').value = '';
+            
+            if(!isLoading) {
+                saveToLocalStorage();
+                if(!name) {
+                    document.getElementById('teamName').value = '';
+                    document.getElementById('clubCountry').value = '';
+                    document.getElementById('igUser').value = '';
+                }
+            }
         }
 
         function deleteRow(btn) {
             btn.closest('tr').remove();
+            saveToLocalStorage();
         }
 
         function exportToExcel() {
-            const data = [["Equipo", "Instagram", "Estado"]];
+            const data = [["Equipo", "País", "Instagram", "Estado"]];
             const trs = document.querySelectorAll('#tableBody tr');
             
             trs.forEach(tr => {
                 const team = tr.cells[0].innerText;
-                const ig = tr.cells[1].innerText;
-                const status = tr.cells[2].querySelector('select').value;
-                data.push([team, ig, status]);
+                const country = tr.cells[1].innerText.replace('📍 ', '');
+                const ig = tr.cells[2].innerText;
+                const status = tr.cells[3].querySelector('select').value;
+                data.push([team, country, ig, status]);
             });
 
             const ws = XLSX.utils.aoa_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Equipos IG");
+            XLSX.utils.book_append_sheet(wb, ws, "Equipos");
             XLSX.writeFile(wb, "Registro_Equipos_Instagram.xlsx");
+        }
+
+        function importFromExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+                for(let i = 1; i < json.length; i++) {
+                    const rowData = json[i];
+                    if(rowData.length >= 2) {
+                        addRow(
+                            rowData[0] || "S/N", 
+                            rowData[1] || "", 
+                            rowData[2] || "", 
+                            rowData[3] || "Pendiente"
+                        );
+                    }
+                }
+                alert("Importación completada con éxito");
+                event.target.value = '';
+            };
+            reader.readAsArrayBuffer(file);
         }
     </script>
 </body>
