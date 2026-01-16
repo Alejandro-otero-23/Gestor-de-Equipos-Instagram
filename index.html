@@ -8,11 +8,23 @@
     <!-- Librería para exportar a Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        .status-pendiente { background-color: #ebf8ff; color: #2b6cb0; }
-        .status-enviado { background-color: #fefcbf; color: #b7791f; }
-        .status-conversacion { background-color: #f0fff4; color: #2f855a; }
-        .status-rechazado { background-color: #fff5f5; color: #c53030; }
-        .status-finalizado { background-color: #faf5ff; color: #6b46c1; }
+        .status-pendiente { background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+        .status-enviado { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+        .status-conversacion { background-color: #f0fff4; color: #2f855a; border: 1px solid #c6f6d5; }
+        .status-rechazado { background-color: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+        .status-finalizado { background-color: #faf5ff; color: #6b46c1; border: 1px solid #e9d8fd; }
+        
+        select.status-select {
+            appearance: none;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+            min-width: 160px;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen p-4 md:p-8">
@@ -23,7 +35,7 @@
                 <p class="text-gray-500">Organiza tus contactos y exporta a Excel</p>
             </div>
             <div class="flex gap-2">
-                <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm font-semibold">
                     <span>📥 Descargar Excel</span>
                 </button>
             </div>
@@ -32,14 +44,14 @@
         <!-- Formulario de Entrada -->
         <div class="p-6 bg-gray-50 border-b border-gray-200">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input type="text" id="teamName" placeholder="Nombre del Equipo" class="p-2 border rounded-md">
-                <input type="text" id="igUser" placeholder="Usuario (@ejemplo)" class="p-2 border rounded-md">
-                <select id="status" class="p-2 border rounded-md">
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="Enviado">Enviado</option>
-                    <option value="En Conversación">En Conversación</option>
-                    <option value="Rechazado">Rechazado</option>
-                    <option value="Finalizado">Finalizado</option>
+                <input type="text" id="teamName" placeholder="Nombre del Equipo" class="p-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none">
+                <input type="text" id="igUser" placeholder="Usuario (@ejemplo)" class="p-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none">
+                <select id="status" class="p-2 border rounded-md bg-white">
+                    <option value="Pendiente">🕒 Pendiente</option>
+                    <option value="Enviado">📩 Enviado</option>
+                    <option value="En Conversación">💬 En Conversación</option>
+                    <option value="Rechazado">❌ Rechazado</option>
+                    <option value="Finalizado">✅ Finalizado</option>
                 </select>
                 <button onclick="addRow()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">
                     + Agregar Equipo
@@ -59,12 +71,20 @@
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <!-- Filas de ejemplo iniciales -->
+                    <!-- Fila de ejemplo con iconos -->
                     <tr class="hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 border-b font-medium">Kraken Gaming</td>
-                        <td class="px-6 py-4 border-b text-blue-600"><a href="https://instagram.com/krakengaming" target="_blank">@krakengaming</a></td>
-                        <td class="px-6 py-4 border-b"><span class="px-2 py-1 rounded-full text-xs font-bold status-conversacion">En Conversación</span></td>
-                        <td class="px-6 py-4 border-b"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 font-bold">Eliminar</button></td>
+                        <td class="px-6 py-4 border-b font-medium">Ejemplo Team</td>
+                        <td class="px-6 py-4 border-b text-blue-600 font-semibold italic"><a href="https://instagram.com/ejemplo" target="_blank">@ejemplo</a></td>
+                        <td class="px-6 py-4 border-b">
+                            <select onchange="updateStatusStyle(this)" class="status-select status-enviado">
+                                <option value="Pendiente">🕒 Pendiente</option>
+                                <option value="Enviado" selected>📩 Enviado</option>
+                                <option value="En Conversación">💬 En Conversación</option>
+                                <option value="Rechazado">❌ Rechazado</option>
+                                <option value="Finalizado">✅ Finalizado</option>
+                            </select>
+                        </td>
+                        <td class="px-6 py-4 border-b"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 font-bold text-sm">Eliminar</button></td>
                     </tr>
                 </tbody>
             </table>
@@ -72,6 +92,23 @@
     </div>
 
     <script>
+        function getStatusClass(status) {
+            // Limpia el texto de emojis y espacios para la clase CSS
+            const cleanStatus = status.split(' ').pop().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return "status-" + cleanStatus;
+        }
+
+        function updateStatusStyle(selectElement) {
+            selectElement.className = "status-select";
+            const statusValue = selectElement.value;
+            
+            if (statusValue.includes("Pendiente")) selectElement.classList.add("status-pendiente");
+            if (statusValue.includes("Enviado")) selectElement.classList.add("status-enviado");
+            if (statusValue.includes("En Conversación")) selectElement.classList.add("status-conversacion");
+            if (statusValue.includes("Rechazado")) selectElement.classList.add("status-rechazado");
+            if (statusValue.includes("Finalizado")) selectElement.classList.add("status-finalizado");
+        }
+
         function addRow() {
             const teamName = document.getElementById('teamName').value;
             let igUser = document.getElementById('igUser').value.replace('@', '');
@@ -86,18 +123,29 @@
             const row = document.createElement('tr');
             row.className = "hover:bg-gray-50 transition";
             
-            const statusClass = "status-" + status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+            // Determinar clase inicial
+            let statusClass = "status-pendiente";
+            if (status.includes("Enviado")) statusClass = "status-enviado";
+            if (status.includes("En Conversación")) statusClass = "status-conversacion";
+            if (status.includes("Rechazado")) statusClass = "status-rechazado";
+            if (status.includes("Finalizado")) statusClass = "status-finalizado";
 
             row.innerHTML = `
                 <td class="px-6 py-4 border-b font-medium">${teamName}</td>
-                <td class="px-6 py-4 border-b text-blue-600"><a href="https://instagram.com/${igUser}" target="_blank">@${igUser}</a></td>
-                <td class="px-6 py-4 border-b"><span class="px-2 py-1 rounded-full text-xs font-bold ${statusClass}">${status}</span></td>
-                <td class="px-6 py-4 border-b"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 font-bold">Eliminar</button></td>
+                <td class="px-6 py-4 border-b text-blue-600 font-semibold italic"><a href="https://instagram.com/${igUser}" target="_blank">@${igUser}</a></td>
+                <td class="px-6 py-4 border-b">
+                    <select onchange="updateStatusStyle(this)" class="status-select ${statusClass}">
+                        <option value="Pendiente" ${status.includes('Pendiente') ? 'selected' : ''}>🕒 Pendiente</option>
+                        <option value="Enviado" ${status.includes('Enviado') ? 'selected' : ''}>📩 Enviado</option>
+                        <option value="En Conversación" ${status.includes('Conversación') ? 'selected' : ''}>💬 En Conversación</option>
+                        <option value="Rechazado" ${status.includes('Rechazado') ? 'selected' : ''}>❌ Rechazado</option>
+                        <option value="Finalizado" ${status.includes('Finalizado') ? 'selected' : ''}>✅ Finalizado</option>
+                    </select>
+                </td>
+                <td class="px-6 py-4 border-b"><button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700 font-bold text-sm">Eliminar</button></td>
             `;
 
             tableBody.appendChild(row);
-
-            // Limpiar inputs
             document.getElementById('teamName').value = '';
             document.getElementById('igUser').value = '';
         }
@@ -107,25 +155,19 @@
         }
 
         function exportToExcel() {
-            const table = document.getElementById('mainTable');
-            const rows = [];
+            const data = [["Equipo", "Instagram", "Estado"]];
+            const trs = document.querySelectorAll('#tableBody tr');
             
-            // Recopilar datos excluyendo la columna de acciones
-            const trs = table.querySelectorAll('tr');
-            trs.forEach((tr, index) => {
-                const rowData = [];
-                const tds = tr.querySelectorAll('th, td');
-                for (let i = 0; i < tds.length - 1; i++) {
-                    rowData.push(tds[i].innerText);
-                }
-                rows.push(rowData);
+            trs.forEach(tr => {
+                const team = tr.cells[0].innerText;
+                const ig = tr.cells[1].innerText;
+                const status = tr.cells[2].querySelector('select').value;
+                data.push([team, ig, status]);
             });
 
-            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const ws = XLSX.utils.aoa_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Equipos IG");
-            
-            // Generar archivo
             XLSX.writeFile(wb, "Registro_Equipos_Instagram.xlsx");
         }
     </script>
